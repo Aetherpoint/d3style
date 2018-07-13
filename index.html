@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+
+
+<!-- CSS -->
+<style>
+/* These are static ways to set the d3 nodes styles with CSS */
+/* To do this dynamically you’ll need javascript */
+/* See the "Styling SVGs With CSS" section on https://www.smashingmagazine.com/2014/11/styling-and-animating-svgs-with-css/ */
+
+.links line {
+  /* The color of the lines between the nodes (HEX) */
+  stroke: #AAAAAA; 
+
+  /* The lines between the nodes transparency (0 - 1) */
+  stroke-opacity: 0.6; 
+}
+
+/* Uncomment to set global overriding styles */
+.nodes circle {
+  /* The outline color of the nodes, here they’re white (HEX) */
+  /*stroke: #FFFFFF;*/  
+
+  /* The width of the stroke around the notes (floating point number for pixels) */
+  /*stroke-width: 1.5px;*/
+}
+
+/* If you wanted to use CSS to style things */
+/* you could assign attributes (line 101) and target them here in the CSS */
+.nodes [coolness=cool] { 
+  stroke-width: 20px;
+}
+
+</style>
+<!-- /CSS -->
+
+
+
+<!-- HTML -->
+<body>
+
+  <div>
+    <!-- SVG -->
+    <svg width="960" height="600"></svg>
+    <!-- /SVG -->
+  </div>
+
+  SVG Node styling test!
+</body>
+<!-- /HTML -->
+
+
+
+<!-- JS -->
+<!-- D3 -->
+<script src="d3.v4.min.js"></script>
+
+<!-- Get ready to style D3 Graph -->
+<!-- And provide rules for styling -->
+<script src="nodestyle.js"></script>
+
+<!-- Build D3 Graph -->
+<script>
+
+// Code constructing the D3 force directed graph
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
+
+var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+var simulation = d3.forceSimulation()
+    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+    .force("charge", d3.forceManyBody())
+    .force("center", d3.forceCenter(width / 2, height / 2));
+
+d3.json("miserables.json", function(error, graph) {
+  if (error) throw error;
+
+  var link = svg.append("g")
+      .attr("class", "links") // This is attaching a CSS class called "links" to the parent container of all the links which our javascript will use as an identifier
+    
+    .selectAll("line")
+    .data(graph.links)
+    .enter().append("line")
+      .attr("stroke-width", function(d) { return Math.sqrt(d.value); })
+
+
+  var node = svg.append("g")
+      .attr("class", "nodes") // This is attaching a CSS class called "nodes" to the parent container of all the links which our javascript will use as an identifier
+
+    .selectAll("circle")
+    .data(graph.nodes)
+    .enter().append("circle")
+
+      // Add a custom attribute so ModifyGraph() knows what to style when. 
+      // Here, we’re just adding an attribute called 'group' and assigning the respective group number from the JSON.
+      // This was we can store data in SVG elements to use alter
+      .attr("group", function(d) { return d.group; }) 
+      // .attr("coolness", "cool" }) 
+
+      // Here’s another way to set up d3 graphs based on data
+      // Here’s where you might set the radius of the node based on some data passed through d
+      .attr("r", function(d) { 
+        return DataToStyle(d.group).radius;
+      }) 
+      // Here’s where you might set the fill color of the node based on some data passed through d
+      .attr("fill", function(d) { 
+        return DataToStyle(d.group).fill;
+      }) 
+      // Here’s where you might set the stroke color of the node based on some data passed through d
+      .attr("stroke", function(d) { 
+        return DataToStyle(d.group).stroke;
+      }) 
+      // Here’s where you might set the stroke width of the node based on some data passed through d
+      .attr("stroke-width", function(d) { 
+        return DataToStyle(d.group).strokeWidth;
+      }) 
+
+      .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+
+  node.append("title")
+      .text(function(d) { return d.id; });
+
+  simulation
+      .nodes(graph.nodes)
+      .on("tick", ticked);
+
+  simulation.force("link")
+      .links(graph.links);
+
+  function ticked() {
+    link
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node
+        .attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
+  }
+
+
+  // If you want to change styles after the graph is generated
+  // you could try something like this
+  ModifyGraph();
+
+});
+
+function dragstarted(d) {
+  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged(d) {
+  d.fx = d3.event.x;
+  d.fy = d3.event.y;
+}
+
+function dragended(d) {
+  if (!d3.event.active) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}
+
+</script>
+<!-- /JS -->
+
+
+
+
+
+
+
